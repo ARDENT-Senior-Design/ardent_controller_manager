@@ -28,7 +28,7 @@
  * Author: Wim Meeussen
  */
 
-#include "../include/scheduler.h"
+#include "../include/ardent_controller_manager/scheduler.h"
 
 using namespace std;
 

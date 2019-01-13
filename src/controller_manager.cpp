@@ -28,15 +28,15 @@
  * Author: Stuart Glaser, Wim Meeussen
  */
 
-#include "../include/controller_manager.h"
-#include "../include/scheduler.h"
+#include "../include/ardent_controller_manager/controller_manager.h"
+#include "../include/ardent_controller_manager/scheduler.h"
 #include <algorithm>
 #include <boost/thread/thread.hpp>
 #include <boost/thread/condition.hpp>
 #include <sstream>
 #include "ros/console.h"
 
-using namespace ardent_mechanism_model;
+using namespace ardent_model;
 using namespace ardent_controller_manager;
 using namespace ardent_hardware_interface;
 using namespace ardent_controller_interface;
@@ -55,9 +55,9 @@ ControllerManager::ControllerManager(HardwareInterface *hw, const ros::NodeHandl
   current_controllers_list_(0),
   used_by_realtime_(-1),
   pub_joint_state_(nh, "joint_states", 1),
-  pub_mech_stats_(nh, "mechanism_statistics", 1),
+  pub_robot_stats_(nh, "robot_statistics", 1),
   last_published_joint_state_(ros::Time::now()),
-  last_published_mechanism_stats_(ros::Time::now())
+  last_published_robot_stats_(ros::Time::now())
 {}
 
 ControllerManager::~ControllerManager()
@@ -70,15 +70,17 @@ ControllerManager::~ControllerManager()
 bool ControllerManager::initXml(TiXmlElement* config)
 {
   if (!model_.initXml(config)){
-    ROS_ERROR("Failed to initialize ardent mechanism model");
+    ROS_ERROR("Failed to initialize ardent model");
     return false;
   }
   state_ = new RobotState(&model_);
+
+
   motors_previously_halted_ = state_->isHalted();
 
   // pre-allocate for realtime publishing
-  pub_mech_stats_.msg_.controller_statistics.resize(0);
-  pub_mech_stats_.msg_.actuator_statistics.resize(model_.hw_->actuators_.size());
+  pub_robot_stats_.msg_.controller_statistics.resize(0);
+  pub_robot_stats_.msg_.actuator_statistics.resize(model_.hw_->actuators_.size());
   int joints_size = 0;
   for (unsigned int i = 0; i < state_->joint_states_.size(); ++i)
   {
@@ -91,17 +93,17 @@ bool ControllerManager::initXml(TiXmlElement* config)
     }
     ++joints_size;
   }
-  pub_mech_stats_.msg_.joint_statistics.resize(joints_size);
+  pub_robot_stats_.msg_.joint_statistics.resize(joints_size);
   pub_joint_state_.msg_.name.resize(joints_size);
   pub_joint_state_.msg_.position.resize(joints_size);
   pub_joint_state_.msg_.velocity.resize(joints_size);
   pub_joint_state_.msg_.effort.resize(joints_size);
 
-  // get the publish rate for mechanism state
-  double publish_rate_joint_state, publish_rate_mechanism_stats;
-  cm_node_.param("mechanism_statistics_publish_rate", publish_rate_mechanism_stats, 1.0);
+  // get the publish rate for Robot state
+  double publish_rate_joint_state, publish_rate_robot_stats;
+  cm_node_.param("Robot_statistics_publish_rate", publish_rate_robot_stats, 1.0);
   cm_node_.param("joint_state_publish_rate", publish_rate_joint_state, 100.0);
-  publish_period_mechanism_stats_ = Duration(1.0/fmax(0.000001, publish_rate_mechanism_stats));
+  publish_period_robot_stats_ = Duration(1.0/fmax(0.000001, publish_rate_robot_stats));
   publish_period_joint_state_ = Duration(1.0/fmax(0.000001, publish_rate_joint_state));
 
   // create controller loader
@@ -166,7 +168,7 @@ void ControllerManager::update()
   post_update_stats_.acc((end - end_update).toSec());
 
   // publish state
-  publishMechanismStatistics();
+  publishRobotStatistics();
   publishJointState();
 
   // there are controllers to start/stop
@@ -342,10 +344,10 @@ bool ControllerManager::loadController(const std::string& name)
   }
 
   // Resize controller state vector
-  pub_mech_stats_.lock();
-  pub_mech_stats_.msg_.controller_statistics.resize(to.size());
+  pub_robot_stats_.lock();
+  pub_robot_stats_.msg_.controller_statistics.resize(to.size());
   for (size_t i=0; i<to.size(); i++)
-    pub_mech_stats_.msg_.controller_statistics[i].name = to[i].name;
+    pub_robot_stats_.msg_.controller_statistics[i].name = to[i].name;
 
   // Destroys the old controllers list when the realtime thread is finished with it.
   int former_current_controllers_list_ = current_controllers_list_;
@@ -356,7 +358,7 @@ bool ControllerManager::loadController(const std::string& name)
     usleep(200);
   }
   from.clear();
-  pub_mech_stats_.unlock();
+  pub_robot_stats_.unlock();
 
   ROS_DEBUG("Successfully load controller '%s'", name.c_str());
   return true;
@@ -438,10 +440,10 @@ bool ControllerManager::unloadController(const std::string &name)
 
   // Resize controller state vector
   ROS_DEBUG("Resizing controller state vector");
-  pub_mech_stats_.lock();
-  pub_mech_stats_.msg_.controller_statistics.resize(to.size());
+  pub_robot_stats_.lock();
+  pub_robot_stats_.msg_.controller_statistics.resize(to.size());
   for (size_t i=0; i<to.size(); i++)
-    pub_mech_stats_.msg_.controller_statistics[i].name = to[i].name;
+    pub_robot_stats_.msg_.controller_statistics[i].name = to[i].name;
 
   // Destroys the old controllers list when the realtime thread is finished with it.
   ROS_DEBUG("Realtime switches over to new controller list");
@@ -455,7 +457,7 @@ bool ControllerManager::unloadController(const std::string &name)
   ROS_DEBUG("Destruct controller");
   from.clear();
   ROS_DEBUG("Destruct controller finished");
-  pub_mech_stats_.unlock();
+  pub_robot_stats_.unlock();
 
   ROS_DEBUG("Successfully unloaded controller '%s'", name.c_str());
   return true;
@@ -472,7 +474,7 @@ bool ControllerManager::switchController(const std::vector<std::string>& start_c
 
   if (strictness == 0){
     ROS_WARN("Controller Manager: To switch controllers you need to specify a strictness level of STRICT or BEST_EFFORT. Defaulting to BEST_EFFORT.");
-    strictness = ardent_mechanism_msgs::SwitchController::Request::BEST_EFFORT;
+    strictness = ardent_component_msgs::SwitchController::Request::BEST_EFFORT;
   }
 
   ROS_DEBUG("switching controllers:");
@@ -490,7 +492,7 @@ bool ControllerManager::switchController(const std::vector<std::string>& start_c
   {
     ct = getControllerByName(stop_controllers[i]);
     if (ct == NULL){
-      if (strictness ==  ardent_mechanism_msgs::SwitchController::Request::STRICT){
+      if (strictness ==  ardent_component_msgs::SwitchController::Request::STRICT){
         ROS_ERROR("Could not stop controller with name %s because no controller with this name exists",
                   stop_controllers[i].c_str());
         stop_request_.clear();
@@ -514,7 +516,7 @@ bool ControllerManager::switchController(const std::vector<std::string>& start_c
   {
     ct = getControllerByName(start_controllers[i]);
     if (ct == NULL){
-      if (strictness ==  ardent_mechanism_msgs::SwitchController::Request::STRICT){
+      if (strictness ==  ardent_component_msgs::SwitchController::Request::STRICT){
         ROS_ERROR("Could not start controller with name %s because no controller with this name exists",
                   start_controllers[i].c_str());
         stop_request_.clear();
@@ -570,7 +572,7 @@ void ControllerManager::publishJointState()
           assert(j < pub_joint_state_.msg_.position.size());
           assert(j < pub_joint_state_.msg_.velocity.size());
           assert(j < pub_joint_state_.msg_.effort.size());
-          ardent_mechanism_model::JointState *in = &state_->joint_states_[i];
+          ardent_model::JointState *in = &state_->joint_states_[i];
           pub_joint_state_.msg_.name[j] = state_->joint_states_[i].joint_->name;
           pub_joint_state_.msg_.position[j] = in->position_;
           pub_joint_state_.msg_.velocity[j] = in->velocity_;
@@ -586,15 +588,15 @@ void ControllerManager::publishJointState()
 }
 
 
-void ControllerManager::publishMechanismStatistics()
+void ControllerManager::publishRobotStatistics()
 {
   ros::Time now = ros::Time::now();
-  if (now > last_published_mechanism_stats_ + publish_period_mechanism_stats_)
+  if (now > last_published_robot_stats_ + publish_period_robot_stats_)
   {
-    if (pub_mech_stats_.trylock())
+    if (pub_robot_stats_.trylock())
     {
-      while (last_published_mechanism_stats_ + publish_period_mechanism_stats_ < now)
-        last_published_mechanism_stats_ = last_published_mechanism_stats_ + publish_period_mechanism_stats_;
+      while (last_published_robot_stats_ + publish_period_robot_stats_ < now)
+        last_published_robot_stats_ = last_published_robot_stats_ + publish_period_robot_stats_;
 
       // joint state
       unsigned int j = 0;
@@ -603,9 +605,9 @@ void ControllerManager::publishMechanismStatistics()
         int type = state_->joint_states_[i].joint_->type;
         if (type == urdf::Joint::REVOLUTE || type == urdf::Joint::CONTINUOUS || type == urdf::Joint::PRISMATIC)
         {
-          assert(j < pub_mech_stats_.msg_.joint_statistics.size());
-          ardent_mechanism_model::JointState *in = &state_->joint_states_[i];
-          ardent_mechanism_msgs::JointStatistics *out = &pub_mech_stats_.msg_.joint_statistics[j];
+          assert(j < pub_robot_stats_.msg_.joint_statistics.size());
+          ardent_model::JointState *in = &state_->joint_states_[i];
+          ardent_component_msgs::JointStatistics *out = &pub_robot_stats_.msg_.joint_statistics[j];
           out->timestamp = now;
           out->name = state_->joint_states_[i].joint_->name;
           out->position = in->position_;
@@ -628,7 +630,7 @@ void ControllerManager::publishMechanismStatistics()
       unsigned int i = 0;
       for (ActuatorMap::const_iterator it = model_.hw_->actuators_.begin(); it != model_.hw_->actuators_.end(); ++i, ++it)
       {
-        ardent_mechanism_msgs::ActuatorStatistics *out = &pub_mech_stats_.msg_.actuator_statistics[i];
+        ardent_component_msgs::ActuatorStatistics *out = &pub_robot_stats_.msg_.actuator_statistics[i];
         ActuatorState *in = &(it->second->state_);
         out->timestamp = now;
         out->name = it->first;
@@ -660,7 +662,7 @@ void ControllerManager::publishMechanismStatistics()
       std::vector<ControllerSpec> &controllers = controllers_lists_[used_by_realtime_];
       for (unsigned int i = 0; i < controllers.size(); ++i)
       {
-        ardent_mechanism_msgs::ControllerStatistics *out = &pub_mech_stats_.msg_.controller_statistics[i];
+        ardent_component_msgs::ControllerStatistics *out = &pub_robot_stats_.msg_.controller_statistics[i];
         out->timestamp = now;
         out->running = controllers[i].c->isRunning();
         out->max_time = ros::Duration(max(controllers[i].stats->acc));
@@ -670,9 +672,9 @@ void ControllerManager::publishMechanismStatistics()
         out->time_last_control_loop_overrun = controllers[i].stats->time_last_control_loop_overrun;
       }
 
-      pub_mech_stats_.msg_.header.stamp = ros::Time::now();
+      pub_robot_stats_.msg_.header.stamp = ros::Time::now();
 
-      pub_mech_stats_.unlockAndPublish();
+      pub_robot_stats_.unlockAndPublish();
     }
   }
 }
@@ -680,8 +682,8 @@ void ControllerManager::publishMechanismStatistics()
 
 
 bool ControllerManager::reloadControllerLibrariesSrv(
-  ardent_mechanism_msgs::ReloadControllerLibraries::Request &req,
-  ardent_mechanism_msgs::ReloadControllerLibraries::Response &resp)
+  ardent_component_msgs::ReloadControllerLibraries::Request &req,
+  ardent_component_msgs::ReloadControllerLibraries::Response &resp)
 {
   // lock services
   ROS_DEBUG("reload libraries service called");
@@ -701,7 +703,7 @@ bool ControllerManager::reloadControllerLibrariesSrv(
   if (!controllers.empty()){
     ROS_INFO("Controller manager: Killing all running controllers");
     std::vector<std::string> empty;
-    if (!switchController(empty,controllers, ardent_mechanism_msgs::SwitchController::Request::BEST_EFFORT)){
+    if (!switchController(empty,controllers, ardent_component_msgs::SwitchController::Request::BEST_EFFORT)){
       ROS_ERROR("Controller manager: Cannot reload controller libraries because failed to stop running controllers");
       resp.ok = false;
       return true;
@@ -730,8 +732,8 @@ bool ControllerManager::reloadControllerLibrariesSrv(
 
 
 bool ControllerManager::listControllerTypesSrv(
-  ardent_mechanism_msgs::ListControllerTypes::Request &req,
-  ardent_mechanism_msgs::ListControllerTypes::Response &resp)
+  ardent_component_msgs::ListControllerTypes::Request &req,
+  ardent_component_msgs::ListControllerTypes::Response &resp)
 {
   // pretend to use the request
   (void) req;
@@ -749,8 +751,8 @@ bool ControllerManager::listControllerTypesSrv(
 
 
 bool ControllerManager::listControllersSrv(
-  ardent_mechanism_msgs::ListControllers::Request &req,
-  ardent_mechanism_msgs::ListControllers::Response &resp)
+  ardent_component_msgs::ListControllers::Request &req,
+  ardent_component_msgs::ListControllers::Response &resp)
 {
   // pretend to use the request
   (void) req;
@@ -786,8 +788,8 @@ bool ControllerManager::listControllersSrv(
 
 
 bool ControllerManager::loadControllerSrv(
-  ardent_mechanism_msgs::LoadController::Request &req,
-  ardent_mechanism_msgs::LoadController::Response &resp)
+  ardent_component_msgs::LoadController::Request &req,
+  ardent_component_msgs::LoadController::Response &resp)
 {
   // lock services
   ROS_DEBUG("loading service called for controller %s ",req.name.c_str());
@@ -802,8 +804,8 @@ bool ControllerManager::loadControllerSrv(
 
 
 bool ControllerManager::unloadControllerSrv(
-  ardent_mechanism_msgs::UnloadController::Request &req,
-  ardent_mechanism_msgs::UnloadController::Response &resp)
+  ardent_component_msgs::UnloadController::Request &req,
+  ardent_component_msgs::UnloadController::Response &resp)
 {
   // lock services
   ROS_DEBUG("unloading service called for controller %s ",req.name.c_str());
@@ -818,8 +820,8 @@ bool ControllerManager::unloadControllerSrv(
 
 
 bool ControllerManager::switchControllerSrv(
-  ardent_mechanism_msgs::SwitchController::Request &req,
-  ardent_mechanism_msgs::SwitchController::Response &resp)
+  ardent_component_msgs::SwitchController::Request &req,
+  ardent_component_msgs::SwitchController::Response &resp)
 {
   // lock services
   ROS_DEBUG("switching service called");

@@ -35,22 +35,22 @@
 #include <map>
 #include <string>
 #include <vector>
-#include "ros/ros.h"
-// #include "ardent_controller_manager/controller_spec.h"
+#include <ros/ros.h>
+#include "controller_spec.h"
 #include <tinyxml.h>
 #include <ardent/hardware_interface.h>
 #include <ardent/robot.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <ros/node_handle.h>
-#include "controller_provider.h"
+#include <ardent_controllers/controller_provider.h>
 #include "pluginlib/class_loader.h"
-#include <ardent_mechanism_msgs/ListControllerTypes.h>
-#include <ardent_mechanism_msgs/ListControllers.h>
-#include <ardent_mechanism_msgs/ReloadControllerLibraries.h>
-#include <ardent_mechanism_msgs/LoadController.h>
-#include <ardent_mechanism_msgs/UnloadController.h>
-#include <ardent_mechanism_msgs/SwitchController.h>
-#include <ardent_mechanism_msgs/MechanismStatistics.h>
+#include <ardent_component_msgs/ListControllerTypes.h>
+#include <ardent_component_msgs/ListControllers.h>
+#include <ardent_component_msgs/ReloadControllerLibraries.h>
+#include <ardent_component_msgs/LoadController.h>
+#include <ardent_component_msgs/UnloadController.h>
+#include <ardent_component_msgs/SwitchController.h>
+#include <ardent_component_msgs/RobotStatistics.h>
 #include <sensor_msgs/JointState.h>
 #include <boost/thread/condition.hpp>
 
@@ -106,25 +106,25 @@ private:
 
   // for publishing constroller state
   void publishJointState();
-  void publishMechanismStatistics();
+  void publishRobotStatistics();
   realtime_tools::RealtimePublisher<sensor_msgs::JointState> pub_joint_state_;
-  realtime_tools::RealtimePublisher<ardent_mechanism_msgs::MechanismStatistics> pub_mech_stats_;
-  ros::Duration publish_period_joint_state_, publish_period_mechanism_stats_;
-  ros::Time last_published_joint_state_, last_published_mechanism_stats_;
+  realtime_tools::RealtimePublisher<ardent_component_msgs::RobotStatistics> pub_robot_stats_;
+  ros::Duration publish_period_joint_state_, publish_period_robot_stats_;
+  ros::Time last_published_joint_state_, last_published_robot_stats_;
 
   // services to work with controllers
-  bool listControllerTypesSrv(ardent_mechanism_msgs::ListControllerTypes::Request &req,
-                              ardent_mechanism_msgs::ListControllerTypes::Response &resp);
-  bool listControllersSrv(ardent_mechanism_msgs::ListControllers::Request &req,
-                          ardent_mechanism_msgs::ListControllers::Response &resp);
-  bool switchControllerSrv(ardent_mechanism_msgs::SwitchController::Request &req,
-                           ardent_mechanism_msgs::SwitchController::Response &resp);
-  bool loadControllerSrv(ardent_mechanism_msgs::LoadController::Request &req,
-                          ardent_mechanism_msgs::LoadController::Response &resp);
-  bool unloadControllerSrv(ardent_mechanism_msgs::UnloadController::Request &req,
-                         ardent_mechanism_msgs::UnloadController::Response &resp);
-  bool reloadControllerLibrariesSrv(ardent_mechanism_msgs::ReloadControllerLibraries::Request &req,
-                                    ardent_mechanism_msgs::ReloadControllerLibraries::Response &resp);
+  bool listControllerTypesSrv(ardent_component_msgs::ListControllerTypes::Request &req,
+                              ardent_component_msgs::ListControllerTypes::Response &resp);
+  bool listControllersSrv(ardent_component_msgs::ListControllers::Request &req,
+                          ardent_component_msgs::ListControllers::Response &resp);
+  bool switchControllerSrv(ardent_component_msgs::SwitchController::Request &req,
+                           ardent_component_msgs::SwitchController::Response &resp);
+  bool loadControllerSrv(ardent_component_msgs::LoadController::Request &req,
+                          ardent_component_msgs::LoadController::Response &resp);
+  bool unloadControllerSrv(ardent_component_msgs::UnloadController::Request &req,
+                         ardent_component_msgs::UnloadController::Response &resp);
+  bool reloadControllerLibrariesSrv(ardent_component_msgs::ReloadControllerLibraries::Request &req,
+                                    ardent_component_msgs::ReloadControllerLibraries::Response &resp);
   boost::mutex services_lock_;
   ros::ServiceServer srv_list_controllers_, srv_list_controller_types_, srv_load_controller_;
   ros::ServiceServer srv_unload_controller_, srv_switch_controller_, srv_reload_libraries_;

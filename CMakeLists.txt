@@ -9,11 +9,17 @@ find_package(Eigen3 REQUIRED)
 find_package(TinyXML REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread chrono date_time atomic)
 
+include_directories(
+   include 
+   ${Boost_INCLUDE_DIRS} 
+   ${catkin_INCLUDE_DIRS} 
+   ${EIGEN3_INCLUDE_DIRS})
+
 catkin_package(
     DEPENDS TinyXML
     CATKIN_DEPENDS ardent ardent_controllers ardent_component_msgs sensor_msgs realtime_tools roscpp pluginlib
     INCLUDE_DIRS include
-    LIBRARIES pr2_controller_manager
+    LIBRARIES ardent_controller_manager
 )
 
 add_library(ardent_controller_manager

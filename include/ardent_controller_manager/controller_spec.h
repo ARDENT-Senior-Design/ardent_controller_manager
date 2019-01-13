@@ -26,17 +26,48 @@
 //////////////////////////////////////////////////////////////////////////////
 
 /*
- * Author: Wim Meeussen
+ * Author: Stuart Glaser, Wim Meeussen
  */
-#ifndef MECHANISM_CONTROL_SCHEDULER_H
-#define MECHANISM_CONTROL_SCHEDULER_H
+
+#ifndef CONTROLLER_SPEC_H
+#define CONTROLLER_SPEC_H
+
+#pragma GCC diagnostic ignored "-Wextra"
 
 #include <map>
 #include <string>
 #include <vector>
-#include "controller_spec.h"
+#include <ardent_controllers/controller_interface.h>
+#include <boost/circular_buffer.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/accumulators/accumulators.hpp>
+#include <boost/accumulators/statistics/stats.hpp>
+#include <boost/accumulators/statistics/max.hpp>
+#include <boost/accumulators/statistics/mean.hpp>
+#include <boost/accumulators/statistics/variance.hpp>
 
-bool scheduleControllers(const std::vector<ControllerSpec>& c, std::vector<size_t>& schedule);
+typedef boost::accumulators::accumulator_set<
+  double, boost::accumulators::stats<boost::accumulators::tag::max,
+                                     boost::accumulators::tag::mean,
+                                     boost::accumulators::tag::variance> > TimeStatistics;
 
+struct Statistics {
+  TimeStatistics acc;
+  ros::Time time_last_control_loop_overrun;
+  unsigned int num_control_loop_overruns;
+  double max;
+  boost::circular_buffer<double> max1;
+Statistics() : num_control_loop_overruns(0), max(0), max1(60) {}
+};
+
+struct ControllerSpec {
+  std::string name;
+  boost::shared_ptr<ardent_controller_interface::Controller> c;
+  boost::shared_ptr<Statistics> stats;
+  
+  ControllerSpec() : stats(new Statistics) {}
+  ControllerSpec(const ControllerSpec &spec)
+    : name(spec.name), c(spec.c), stats(spec.stats) {}
+};
 
 #endif 
