@@ -3,7 +3,7 @@ project(ardent_controller_manager)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
-find_package(catkin REQUIRED COMPONENTS cmake_modules ardent ardent_controllers ardent_component_msgs sensor_msgs realtime_tools roscpp pluginlib rostest)
+find_package(catkin REQUIRED COMPONENTS rospy cmake_modules ardent ardent_controllers ardent_component_msgs sensor_msgs realtime_tools roscpp pluginlib)
 
 find_package(Eigen3 REQUIRED)
 find_package(TinyXML REQUIRED)
@@ -28,12 +28,23 @@ add_library(ardent_controller_manager
 
 target_link_libraries(ardent_controller_manager ${catkin_LIBRARIES} ${Boost_LIBRARIES} ${TinyXML_LIBRARIES})
 
+catkin_python_setup()
+
+file(GLOB PYTHON_SCRIPTS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" 
+   "${CMAKE_CURRENT_SOURCE_DIR}/scripts/*")
+install(PROGRAMS ${PYTHON_SCRIPTS}
+   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+
+install(FILES controller_manager.launch
+   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
 install(TARGETS ardent_controller_manager 
     RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
     ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
     LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 
-
+install(FILES controller_manager.launch
+   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
 
 install(DIRECTORY include/${PROJECT_NAME}/
    DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
