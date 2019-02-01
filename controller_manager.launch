@@ -5,9 +5,9 @@
       This launch file configures the controller manager, and brings three 
       nodes that use the data published by the contorller manager:
        * the robot state publisher listens to joint_state messages and publishes tf
-       * the controller_to_diagnostics listens to mechanism_statistics and
+       * the controller_to_diagnostics listens to robot_statistics and
          publishes to the diagnostics system
-       * the joints_to_agnostics listens to mechanism_statistics and
+       * the joints_to_agnostics listens to robot_statistics and
          publishes to the diagnostics system
 -->
 

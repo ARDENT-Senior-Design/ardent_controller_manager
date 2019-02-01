@@ -37,7 +37,7 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <ardent_controllers/controller_interface.h>
+#include <ardent_controller_interface/controller_interface.h>
 #include <boost/circular_buffer.hpp>
 #include <boost/thread/mutex.hpp>
 #include <boost/accumulators/accumulators.hpp>

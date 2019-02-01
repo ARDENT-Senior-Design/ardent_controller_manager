@@ -3,7 +3,7 @@ project(ardent_controller_manager)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
-find_package(catkin REQUIRED COMPONENTS rospy cmake_modules ardent ardent_controllers ardent_component_msgs sensor_msgs realtime_tools roscpp pluginlib)
+find_package(catkin REQUIRED COMPONENTS rospy cmake_modules ardent_model ardent_controller_interface ardent_component_msgs sensor_msgs realtime_tools roscpp pluginlib)
 
 find_package(Eigen3 REQUIRED)
 find_package(TinyXML REQUIRED)
@@ -17,7 +17,7 @@ include_directories(
 
 catkin_package(
     DEPENDS TinyXML
-    CATKIN_DEPENDS ardent ardent_controllers ardent_component_msgs sensor_msgs realtime_tools roscpp pluginlib
+    CATKIN_DEPENDS ardent_model ardent_controller_interface ardent_component_msgs sensor_msgs realtime_tools roscpp pluginlib
     INCLUDE_DIRS include
     LIBRARIES ardent_controller_manager
 )

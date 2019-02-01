@@ -19,8 +19,8 @@
   <buildtool_depend>catkin</buildtool_depend>
 
   <build_depend>cmake_modules</build_depend>
-  <build_depend>ardent</build_depend>
-  <build_depend>ardent_controllers</build_depend>
+  <build_depend>ardent_model</build_depend>
+  <build_depend>ardent_controller_interface</build_depend>
   <build_depend>ardent_component_msgs</build_depend>
   <build_depend>diagnostic_msgs</build_depend>
   <build_depend>sensor_msgs</build_depend>
@@ -29,8 +29,8 @@
   <build_depend>pluginlib</build_depend>
   <build_depend>rostest</build_depend>
 
-  <exec_depend>ardent</exec_depend>
-  <exec_depend>ardent_controllers</exec_depend>
+  <exec_depend>ardent_model</exec_depend>
+  <exec_depend>ardent_controller_interface</exec_depend>
   <exec_depend>ardent_component_msgs</exec_depend>
   <exec_depend>diagnostic_msgs</exec_depend>
   <exec_depend>sensor_msgs</exec_depend>
@@ -43,5 +43,7 @@
   <!-- The export tag contains other, unspecified, tags -->
   <export>
     <!-- Other tools can request additional information be placed here -->
-    </export>
+
+    <ardent_controller_interface plugin="${prefix}/test/controller_plugin.xml"/>
+  </export>
 </package>

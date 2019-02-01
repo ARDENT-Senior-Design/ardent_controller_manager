@@ -101,7 +101,7 @@ bool ControllerManager::initXml(TiXmlElement* config)
 
   // get the publish rate for Robot state
   double publish_rate_joint_state, publish_rate_robot_stats;
-  cm_node_.param("Robot_statistics_publish_rate", publish_rate_robot_stats, 1.0);
+  cm_node_.param("robot_statistics_publish_rate", publish_rate_robot_stats, 1.0);
   cm_node_.param("joint_state_publish_rate", publish_rate_joint_state, 100.0);
   publish_period_robot_stats_ = Duration(1.0/fmax(0.000001, publish_rate_robot_stats));
   publish_period_joint_state_ = Duration(1.0/fmax(0.000001, publish_rate_joint_state));

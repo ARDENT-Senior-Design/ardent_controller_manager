@@ -71,7 +71,7 @@ if __name__ == '__main__':
             ardent_controller_manager_interface.unload_controller(c)
     elif args[1] == 'lj' or args[1] == 'list-joints':
         track_mech = Tracker('/robot_statistics', RobotStatistics)
-        print "Waiting for mechanism statistics message..."
+        print "Waiting for robot_statistics message..."
         rospy.init_node('mech', anonymous=True)
         while not track_mech.msg:
             time.sleep(0.01)

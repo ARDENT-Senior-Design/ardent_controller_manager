@@ -38,11 +38,11 @@
 #include <ros/ros.h>
 #include "controller_spec.h"
 #include <tinyxml.h>
-#include <ardent/hardware_interface.h>
-#include <ardent/robot.h>
+#include <ardent_model/hardware_interface.h>
+#include <ardent_model/robot.h>
 #include <realtime_tools/realtime_publisher.h>
 #include <ros/node_handle.h>
-#include <ardent_controllers/controller_provider.h>
+#include <ardent_controller_interface/controller_provider.h>
 #include "pluginlib/class_loader.h"
 #include <ardent_component_msgs/ListControllerTypes.h>
 #include <ardent_component_msgs/ListControllers.h>
